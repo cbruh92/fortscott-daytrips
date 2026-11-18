@@ -44,8 +44,18 @@ a{color:var(--link)}
 .kinds button:hover{background:var(--paper-2)}
 .kinds button[aria-pressed="true"]{background:#fff;border-color:var(--rule);font-weight:700}
 .kinds button[aria-pressed="true"] svg{color:var(--sign)}
-input[type=range]{width:100%;accent-color:var(--sign);margin:2px 0 0}
-.ticks{display:flex;justify-content:space-between;font-family:var(--mono);font-size:11.5px;color:var(--muted);margin-top:2px}
+input[type=range]{-webkit-appearance:none;appearance:none;width:100%;height:20px;margin:4px 0 0;background:transparent;cursor:pointer}
+input[type=range]::-webkit-slider-runnable-track{height:6px;border-radius:3px;background:linear-gradient(to right,var(--sign) var(--fill,33%),var(--rule) var(--fill,33%))}
+input[type=range]::-moz-range-track{height:6px;border-radius:3px;background:var(--rule)}
+input[type=range]::-moz-range-progress{height:6px;border-radius:3px;background:var(--sign)}
+input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:18px;height:18px;margin-top:-6px;border-radius:50%;background:#fff;border:3px solid var(--sign);box-sizing:border-box;box-shadow:0 1px 3px rgba(0,0,0,.25)}
+input[type=range]::-moz-range-thumb{width:18px;height:18px;border-radius:50%;background:#fff;border:3px solid var(--sign);box-sizing:border-box;box-shadow:0 1px 3px rgba(0,0,0,.25)}
+input[type=range]:focus-visible{outline:2px solid var(--sign);outline-offset:3px;border-radius:4px}
+.ticks{position:relative;height:26px;font-family:var(--mono);font-size:11.5px;color:var(--muted);margin-top:2px}
+.ticks span{position:absolute;top:0;left:calc(9px + (100% - 18px) * var(--p));transform:translateX(-50%);white-space:nowrap;padding-top:7px}
+.ticks span::before{content:"";position:absolute;top:0;left:50%;width:1px;height:5px;background:var(--muted)}
+.ticks span.first{transform:translateX(-9px)}.ticks span.first::before{left:9px}
+.ticks span.last{transform:translateX(calc(-100% + 9px))}.ticks span.last::before{left:auto;right:9px}
 .tabs{display:flex;gap:16px;flex-wrap:wrap}
 .tabs button{border:0;background:none;padding:2px 0;font-size:15px;color:var(--muted);border-bottom:2px solid transparent}
 .tabs button[aria-pressed="true"]{color:var(--ink);font-weight:700;border-bottom-color:var(--ink)}
@@ -141,7 +151,7 @@ canvas{position:absolute;inset:0;width:100%;height:100%;display:block;touch-acti
       <div class="sec">
         <p class="q"><label for="limit">How far will you drive?</label><b id="limitOut">2 hr</b></p>
         <input type="range" id="limit" min="30" max="300" step="15" value="120">
-        <div class="ticks"><span>30 min</span><span>1 hr</span><span>2 hr</span><span>3 hr</span><span>4 hr</span><span>5 hr</span></div>
+        <div class="ticks" aria-hidden="true"><span class="first" style="--p:0.0000"></span><span style="--p:0.1111">1 hr</span><span style="--p:0.3333">2 hr</span><span style="--p:0.5556">3 hr</span><span style="--p:0.7778">4 hr</span><span class="last" style="--p:1.0000">5 hr</span></div>
       </div>
       <div class="sec row2">
         <div><p class="q">Color the roads by</p><div class="tabs" id="mode"><button type="button" data-v="route" aria-pressed="true">Route</button><button type="button" data-v="time" aria-pressed="false">Drive time</button></div></div>
@@ -337,7 +347,8 @@ function seg(id,key,after){$(id).addEventListener("click",e=>{const b=e.target.c
 seg("mode","mode",()=>{legend();redraw();});
 seg("style","style",()=>{applyStyle();legend();redraw();try{localStorage.setItem("fsdt-style",state.style);}catch(_){}});
 function applyStyle(){const P=S();stage.style.setProperty("--map-bg",P.bg);stage.style.setProperty("--map-ink",P.ink);stage.style.setProperty("--map-rule",P.rule);}
-$("limit").addEventListener("input",e=>{state.limit=+e.target.value;$("limitOut").textContent=fmt(state.limit);list();stats();redraw();});
+function limFill(){const r=$("limit");r.style.setProperty("--fill",((r.value-r.min)/(r.max-r.min)*100)+"%");}
+$("limit").addEventListener("input",e=>{state.limit=+e.target.value;limFill();$("limitOut").textContent=fmt(state.limit);list();stats();redraw();});
 $("limit").addEventListener("change",()=>{fit();redraw();});
 const KICON={
   all:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M3 12h18M12 3a14 14 0 0 1 0 18M12 3a14 14 0 0 0 0 18"/><circle cx="12" cy="12" r="9"/></svg>',
@@ -387,7 +398,7 @@ function fillDrawer(d){
 function select(d,user){state.sel=d||null;const dr=$("drawer");
   for(const b of $("dests").querySelectorAll("button")){if(d&&b.dataset.id===d.id)b.setAttribute("aria-current","true");else b.removeAttribute("aria-current");}
   if(!d){dr.hidden=true;if(user){try{history.replaceState(null,"",location.pathname+location.search);}catch(_){}}request();return;}
-  if(d!==home&&d.t>state.limit){state.limit=Math.min(300,Math.ceil(d.t/15)*15);$("limit").value=state.limit;$("limitOut").textContent=fmt(state.limit);list();stats();fit();dirty=true;}
+  if(d!==home&&d.t>state.limit){state.limit=Math.min(300,Math.ceil(d.t/15)*15);$("limit").value=state.limit;limFill();$("limitOut").textContent=fmt(state.limit);list();stats();fit();dirty=true;}
   fillDrawer(d);dr.hidden=false;if(user){try{history.replaceState(null,"","#"+d.id);}catch(_){}}
   const x=SX(d.x),y=SY(d.y),right=W>860?W-410:W;if(x<30||x>right-30||y<90||y>H-60){view.tx+=(right/2)-x;view.ty+=H/2-y;dirty=true;}
   redraw();}
@@ -409,7 +420,7 @@ document.addEventListener("keydown",e=>{if(e.key==="Escape"&&state.sel)select(nu
 /* ---- start ---- */
 if(CONFIG.suggestEmail){const a=$("suggest");a.href="mailto:"+CONFIG.suggestEmail+"?subject="+encodeURIComponent("Day trip map suggestion");a.textContent=CONFIG.suggestEmail;$("suggestLine").hidden=false;}
 try{const s=localStorage.getItem("fsdt-style");if(s&&STYLES[s]){state.style=s;for(const x of $("style").children)x.setAttribute("aria-pressed",x.dataset.v===s);}}catch(_){}
-applyStyle();$("limitOut").textContent=fmt(state.limit);list();stats();legend();resize();
+applyStyle();limFill();$("limitOut").textContent=fmt(state.limit);list();stats();legend();resize();
 new ResizeObserver(()=>{view.fitted=false;resize();}).observe(stage);
 if(document.fonts&&document.fonts.ready)document.fonts.ready.then(redraw);
 fromHash();if(!location.hash)play();
